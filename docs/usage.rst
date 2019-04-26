@@ -14,9 +14,7 @@ To use socketscpi in a project::
 
     socketscpi.SocketInstrument(host, port=5025, timeout=10, noDelay=True)
 
-Sets the basic configuration for the M8190A and populates class
-attributes accordingly. It should be called any time these settings are
-changed (ideally *once* directly after creating the M8190A object).
+Class constructor that connects to the test equipment and returns a SocketInstrument object that can be used to communicate with the equipment.
 
 **Arguments**
 
@@ -28,7 +26,6 @@ changed (ideally *once* directly after creating the M8190A object).
 **Returns**
 
 * SocketInstrument object
-
 
 
 **disconnect**
