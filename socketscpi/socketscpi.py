@@ -57,12 +57,14 @@ class SocketInstrument:
         Certain instruments format the syst:err? response differently, so remove whitespace and
         extra characters before checking."""
         err = []
-        temp = self.query('syst:err?').strip().replace('+', '').replace('-', '')
+        if 'mso' in self.instId.lower() or 'dso' in self.instId.lower():
+            cmd = 'SYST:ERR? string'
+        else:
+            cmd = 'SYST:ERR?'
+        temp = self.query(cmd).strip().replace('+', '').replace('-', '')
         while temp != '0,"No error"':
-            # print(temp)
             err.append(temp)
             temp = self.query('syst:err?').strip().replace('+', '').replace('-', '')
-        # print(self.query('syst:err?'))
         if err:
             raise SockInstError(err)
 

@@ -23,11 +23,6 @@ socketscpi provides a robust SCPI interface to electronic test and measurement e
 * Documentation: https://socketscpi.readthedocs.io.
 
 
-Features
---------
-
-* TODO
-
 Credits
 -------
 

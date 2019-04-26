@@ -59,11 +59,11 @@ def vna_example(ipAddress, port=5025):
     vna.write('format real,64')
 
     vna.write('calculate1:data? fdata')
-    meas = vna.binblockread(dtype=np.float64)
+    meas = vna.binblockread(datatype='d')
     vna.query('*opc?')
 
     vna.write('calculate1:x?')
-    freq = vna.binblockread(dtype=np.float64)
+    freq = vna.binblockread(datatype='d')
     vna.query('*opc?')
 
     vna.err_check()
@@ -74,7 +74,7 @@ def vna_example(ipAddress, port=5025):
 
 def scope_example(ipAddress):
     # Make connection to instrument
-    scope = socketscpi.SocketInstrument(ipAddress, port=5025)
+    scope = socketscpi.SocketInstrument(ipAddress)
 
     # Measurement setup variables
     vRange = 2
@@ -118,7 +118,6 @@ def scope_example(ipAddress):
     wfm = [(d * yIncrement) + yOrigin for d in data]
 
     # Check for errors
-    scope.err_check()
     scope.disconnect()
 
     return time, wfm
