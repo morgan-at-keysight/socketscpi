@@ -11,6 +11,7 @@ To use socketscpi in a project::
 **SocketInstrument**
 ====================
 ::
+
     socketscpi.SocketInstrument(host, port=5025, timeout=10, noDelay=True)
 
 Sets the basic configuration for the M8190A and populates class
