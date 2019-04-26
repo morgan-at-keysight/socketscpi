@@ -37,7 +37,7 @@ setup(
             'socketscpi=socketscpi.cli:main',
         ],
     },
-    install_requires=requirements,
+    install_requires=['numpy'],
     license="GNU General Public License v3",
     long_description=readme + '\n\n' + history,
     include_package_data=True,
@@ -48,6 +48,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/morgan-at-keysight/socketscpi',
-    version='0.0.4',
+    version='0.0.5',
     zip_safe=False,
 )
