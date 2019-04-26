@@ -11,7 +11,7 @@ import numpy as np
 
 
 class SocketInstrument:
-    def __init__(self, host, port, timeout=10, noDelay=True):
+    def __init__(self, host, port=5025, timeout=10, noDelay=True):
         """Open socket connection with settings for instrument control."""
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         if noDelay:
@@ -66,8 +66,13 @@ class SocketInstrument:
         if err:
             raise SockInstError(err)
 
-    def binblockread(self, dtype=np.int8, debug=False):
-        """Read data with IEEE 488.2 binary block format
+    def binblockread(self, cmd, datatype='b', debug=False):
+        """Send a command and read data with IEEE 488.2 binary block format
+
+        cmd: string containing SCPI command
+        datatype: data type specified using the same naming convention used
+            by Python's built-in struct module
+            https://docs.python.org/3/library/struct.html#format-characters
 
         The waveform is formatted as:
         #<x><yyy><data><newline>, where:
@@ -77,9 +82,36 @@ class SocketInstrument:
         when selecting the data type used to interpret the data.
         The dtype argument used to read the data must match the data
         type used by the instrument that sends the data.
-        <data> is the curve data in binary format.
+        <data> is the data payload in binary format.
         <newline> is a single byte new line character at the end of the data.
         """
+
+        # Decode data type
+        if datatype == 'b':
+            dtype = np.int8
+        elif datatype == 'B':
+            dtype = np.uint8
+        elif datatype == 'h':
+            dtype = np.int16
+        elif datatype == 'H':
+            dtype = np.uint16
+        elif datatype == 'i' or datatype == 'l':
+            dtype = np.int32
+        elif datatype == 'I' or datatype == 'L':
+            dtype = np.uint32
+        elif datatype == 'q':
+            dtype = np.int64
+        elif datatype == 'Q':
+            dtype = np.uint64
+        elif datatype == 'f':
+            dtype = np.float32
+        elif datatype == 'd':
+            dtype = np.float64
+        else:
+            raise BinblockError('Invalid data type selected.')
+
+        # Send command/query
+        self.write(cmd)
 
         # Read # character, raise exception if not present.
         if self.socket.recv(1) != b'#':
@@ -133,32 +165,29 @@ class SocketInstrument:
         numBytes = memoryview(data).nbytes
         return f'#{len(str(numBytes))}{numBytes}'
 
-    def binblockwrite(self, msg, data, debug=False, esr=True):
+    def binblockwrite(self, cmd, data, debug=False, esr=True):
         """Send data with IEEE 488.2 binary block format
 
         The data is formatted as:
         #<x><yyy><data><newline>, where:
         <x> is the number of y bytes. For example, if <yyy>=500, then <x>=3.
         NOTE: <x> is a hexadecimal number.
-        <yyy> is the number of bytes to transfer. Care must be taken
-        when selecting the data type used to interpret the data.
-        The dtype argument used to read the data must match the data
-        type used by the instrument that sends the data.
-        <data> is the curve data in binary format.
+        <yyy> is the number of bytes to transfer.
+        <data> is the data payload in binary format.
         <newline> is a single byte new line character at the end of the data.
         """
 
         header = self.binblock_header(data)
 
         # Send message, header, data, and termination
-        self.socket.send(msg.encode('latin_1'))
+        self.socket.send(cmd.encode('latin_1'))
         self.socket.send(header.encode('latin_1'))
         self.socket.send(data)
         self.socket.send(b'\n')
 
         if debug:
             print(f'binblockwrite --')
-            print(f'msg: {msg}')
+            print(f'msg: {cmd}')
             print(f'header: {header}')
 
         # Check error status register and notify of problems
@@ -167,8 +196,10 @@ class SocketInstrument:
             if int(r) is not 0:
                 self.err_check()
 
+
 class SockInstError(Exception):
     pass
+
 
 class BinblockError(Exception):
     pass

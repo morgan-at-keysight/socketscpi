@@ -72,9 +72,62 @@ def vna_example(ipAddress, port=5025):
     return freq, meas
 
 
+def scope_example(ipAddress):
+    # Make connection to instrument
+    scope = socketscpi.SocketInstrument(ipAddress, port=5025)
+
+    # Measurement setup variables
+    vRange = 2
+    tRange = 500e-9
+    trigLevel = 0
+    ch = 1
+
+    # Preset and wait for operation to complete
+    scope.write('*rst')
+    scope.query('*opc?')
+
+    # Setup up vertical and horizontal ranges
+    scope.write(f'channel{ch}:range {vRange}')
+    scope.write(f'timebase:range {tRange}')
+
+    # Set up trigger mode and level
+    scope.write('trigger:mode edge')
+    scope.write(f'trigger:level channel{ch}, {trigLevel}')
+
+    # Set waveform source
+    scope.write(f'waveform:source channel{ch}')
+
+    # Specify waveform format
+    scope.write('waveform:format byte')
+
+    # Capture data
+    scope.write('digitize')
+
+    # Transfer binary waveform data from scope
+    data = scope.binblockread('waveform:data?', datatype='b')
+
+    # Query x and y values to scale the data appropriately for plotting
+    xIncrement = float(scope.query('waveform:xincrement?'))
+    xOrigin = float(scope.query('waveform:xorigin?'))
+    yIncrement = float(scope.query('waveform:yincrement?'))
+    yOrigin = float(scope.query('waveform:yorigin?'))
+    length = len(data)
+
+    # Apply scaling factors
+    time = [(t * xIncrement) + xOrigin for t in range(length)]
+    wfm = [(d * yIncrement) + yOrigin for d in data]
+
+    # Check for errors
+    scope.err_check()
+    scope.disconnect()
+
+    return time, wfm
+
+
 def main():
     # awg_example('10.112.181.139', port=5025)
-    vna_example('10.112.181.177', port=5025)
+    # vna_example('10.112.181.177', port=5025)
+    scope_example('141.121.210.161')
 
 if __name__ == '__main__':
     main()
