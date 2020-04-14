@@ -4,7 +4,7 @@ import numpy as np
 
 def awg_example(ipAddress, port=5025):
     """Tests generic waveform transfer to M8190. Length and granularity checks not performed."""
-    awg = socketscpi.SocketInstrument(host=ipAddress, port=port, timeout=10)
+    awg = socketscpi.SocketInstrument(ipAddress=ipAddress, port=port, timeout=10)
     print(awg.instId)
     awg.write('*rst')
     awg.query('*opc?')
@@ -38,7 +38,7 @@ def awg_example(ipAddress, port=5025):
 
 def vna_example(ipAddress, port=5025):
     """Test generic VNA connection, sweep control, and data transfer."""
-    vna = socketscpi.SocketInstrument(host=ipAddress, port=port, timeout=10)
+    vna = socketscpi.SocketInstrument(ipAddress=ipAddress, port=port, timeout=10)
     print(vna.instId)
 
     vna.write('system:fpreset')

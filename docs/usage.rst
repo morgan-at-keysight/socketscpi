@@ -7,6 +7,23 @@ To use socketscpi in a project::
     import socketscpi
 
 
+To create an instrument object, do something like this::
+
+    ipAddress = '192.168.1.123'
+    instrument = socketscpi.SocketInstrument(ipAddress)
+
+To send SCPI commands and queries to the instrument, do something like this::
+
+    instrument.write('*rst')
+    instrument.query('*opc?')
+
+To check for and print out errors, do something like this::
+
+    try:
+        instrument.err_check()
+    except socketscpi.SockInstError as e:
+        print(str(e))
+
 ====================
 **SocketInstrument**
 ====================
@@ -18,14 +35,14 @@ Class constructor that connects to the test equipment and returns a SocketInstru
 
 **Arguments**
 
-* ``host``: Instrument host IP address. Argument is a string containing a valid IP address.
-* ``port``: Port used by the instrument to facilitate socket communication. Argument is an int. Default is ``5025``, which is the default port used by Keysight instruments.
-* ``timeout``: Timeout in seconds. This is how long the instrument will wait before sending a timeout error in response to a command or query. Argument is an int. Default is ``10``.
-* ``noDelay``: Enables or disables the TCP_NODELAY flag when configuring the socket. Enabling TCP_NODELAY prevents the concatenation of multiple small data packets and sends them all in a larger message. Argument is a bool. Default is ``True``. Don't mess with this unless you have a specific need.
+* ``host`` ``(string)``: Instrument host IP address. Argument is a string containing a valid IP address.
+* ``port`` ``(int)``:  Port used by the instrument to facilitate socket communication (Keysight equipment uses port 5025 by default).
+* ``timeout`` ``(int)``: Timeout in seconds. This is how long the instrument will wait before sending a timeout error in response to a command or query. Argument is an int. Default is ``10``.
+* ``noDelay`` ``(bool)``: True turns on the TCP_NODELAY flag, which sends data immediately without concatenating multiple packets together. Just leave this alone.
 
 **Returns**
 
-* SocketInstrument object
+* ``socketscpi.SocketInstrument``: Instrument object to be used for communication and control.
 
 
 **disconnect**
@@ -45,48 +62,65 @@ Gracefully closes socket connection.
 * None
 
 
-**query**
----------
-::
-
-    socketscpi.query(cmd)
-
-
-Sends a query to the socket instrument and returns the response as a string.
-
-**Arguments**
-
-* ``cmd``: SCPI query sent to the instrument. Argument is a string, and should be a documented command that has a query form ending in ``?``.
-
-**Returns**
-
-* Response as a ``latin_1`` encoded string.
-
-
 **write**
 ---------
 ::
 
-    socketscpi.write(cmd)
+    SocketInstrument.write(cmd)
 
-Sends a command to the socket instrument.
+Writes a command to the instrument.
 
 **Arguments**
 
-* ``cmd``: SCPI command sent to the instrument. Argument is a string.
+* ``cmd`` ``(string)``: Documented SCPI command to be sent to the instrument.
 
 **Returns**
 
 * None
 
 
+**read**
+--------
+::
+
+    SocketInstrument.read()
+
+Reads the output buffer of the instrument.
+
+**Arguments**
+
+* None
+
+**Returns**
+
+* ``(string)``: Contents of the instrument's output buffer.
+
+
+**query**
+---------
+::
+
+    SocketInstrument.query(cmd)
+
+
+Sends query to instrument and reads the output buffer immediately afterward.
+
+**Arguments**
+
+* ``cmd`` ``(string)``: Documented SCPI query to be sent to instrument (should end in a "?" character).
+
+**Returns**
+
+* ``(string)`` Response from instrument's output buffer as a latin_1-encoded string.
+
+
 **err_check**
 -------------
 ::
 
-    socketscpi.err_check()
+    SocketInstrument.err_check()
 
-Checks for errors, clears error queue, and raises an exception if error has occurred.
+Prints out all errors and clears error queue. Raises SockInstError with the info of the error encountered.
 
 **Arguments**
 
@@ -101,32 +135,33 @@ Checks for errors, clears error queue, and raises an exception if error has occu
 ----------------
 ::
 
-    socketscpi.binblockread(cmd, datatype='b')
+    SocketInstrument.binblockread(cmd, datatype='b')
 
-Sends a command and parses response in IEEE 488.2 binary block format.
+Sends a query and parses response in IEEE 488.2 binary block format.
 
 **Arguments**
 
-* ``cmd``: SCPI command sent to the instrument. Argument is a string, and should be a documented command that causes the instrument to return a binary block.
-* ``datatype``: Data type used to interpret the returned binary data. Argument is a string that matches the `naming convention <https://docs.python.org/3/library/struct.html#format-characters>`_ used by Python's built-in ``struct`` module. Generally, test equipment includes a command to configure the data type of binary blocks, and the instrument's data type should match the data type used here. Default is ``'b'``, which specifies a signed 8 bit integer.
+* ``cmd`` ``(string)``: Documented SCPI query that causes the instrument to return a binary block.
+* ``datatype`` ``(string)``: Data type for the returned data. Uses the same `naming convention <https://docs.python.org/3/library/struct.html#format-characters>`_ used by Python's built-in ``struct`` module. Generally, test equipment includes a command to configure the data type of binary blocks, and the instrument's data type should match the data type used here. Default is ``'b'``, which specifies a signed 8 bit integer.
 
 **Returns**
 
-* Binblock data as a NumPy array.
+* ``(NumPy ndarray)`` Array containing the data from the instrument buffer.
 
 
 **binblockwrite**
 -----------------
 ::
 
-    socketscpi.binblockwrite(cmd, data)
+    SocketInstrument.binblockwrite(cmd, data)
 
 Sends a command and payload data in IEEE 488.2 binary block format.
 
 **Arguments**
 
-* ``cmd``: SCPI command sent to the instrument. Argument is a string, and should be a documented command with a binary block as its last argument.
-* ``data``: Data to be sent to the instrument. Argument is a list or NumPy array. Refer to the documentation of the SCPI command being used for correct argument formatting.
+* ``cmd`` ``(string)``: SCPI command used to send data to instrument as a binary block.
+* ``data`` ``(NumPy ndarray)``: Data to be sent to the instrument. Refer to the documentation of the SCPI command being used for correct argument formatting.
+* ``esr`` ``(bool)``: Determines whether to append an ESR query to the end of the binblockwrite for error checking purposes.
 
 **Returns**
 
