@@ -30,7 +30,7 @@ Features
 
 
 * Free software: GNU General Public License v3
-* Documentation: https://socketscpi.readthedocs.io.
+* Documentation: https://socketscpi.readthedocs.io/en/latest/history.html
 
 
 Credits

@@ -48,7 +48,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'socketscpi'
-copyright = u"2019, Morgan Allison"
+copyright = u"2019-2020, Morgan Allison"
 author = u"Morgan Allison"
 
 # The version info for the project you're documenting, acts as replacement

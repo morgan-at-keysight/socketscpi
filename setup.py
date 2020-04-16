@@ -48,6 +48,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/morgan-at-keysight/socketscpi',
-    version='0.0.5',
+    version='2020.04.0',
     zip_safe=False,
 )
