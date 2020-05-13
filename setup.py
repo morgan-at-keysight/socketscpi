@@ -19,9 +19,9 @@ test_requirements = [ ]
 
 setup(
     author="Morgan Allison",
-    author_email='morgan.j.allison@gmail.com',
+    author_email='morgan.allison@keysight.com',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
         'Natural Language :: English',
@@ -48,6 +48,6 @@ setup(
     test_suite='tests',
     tests_require=test_requirements,
     url='https://github.com/morgan-at-keysight/socketscpi',
-    version='2020.04.0',
+    version='2020.05.0',
     zip_safe=False,
 )

@@ -15,4 +15,9 @@ History
 2020.04.0 (2020-04-15)
 ----------------------
 
-* Added a .read() method. Wrote test scripts to verify performance. Overhauled documentation. Switched to calendar-style versioning.
+* Added a ``.read()`` method. Wrote test scripts to verify performance. Overhauled documentation. Switched to calendar-style versioning.
+
+2020.05.0 (2020-05-13)
+----------------------
+
+* Adjusted the error checking for the ``.query()`` method to account for SCPI queries that require additional arguments.

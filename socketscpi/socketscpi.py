@@ -97,8 +97,8 @@ class SocketInstrument:
 
         if not isinstance(cmd, str):
             raise SockInstError('Argument must be a string.')
-        if cmd[-1] != '?':
-            raise SockInstError('Query must end in "?"')
+        if '?' not in cmd:
+            raise SockInstError('Query must include "?"')
 
         self.write(cmd)
         return self.read()

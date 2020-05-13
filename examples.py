@@ -58,12 +58,10 @@ def vna_example(ipAddress, port=5025):
     vna.write('format:border swap')
     vna.write('format real,64')
 
-    vna.write('calculate1:data? fdata')
-    meas = vna.binblockread(datatype='d')
+    meas = vna.binblockread('calculate1:data? fdata', datatype='d')
     vna.query('*opc?')
 
-    vna.write('calculate1:x?')
-    freq = vna.binblockread(datatype='d')
+    freq = vna.binblockread('calculate1:x?', datatype='d')
     vna.query('*opc?')
 
     vna.err_check()
