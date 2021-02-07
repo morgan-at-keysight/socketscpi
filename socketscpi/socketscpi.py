@@ -12,7 +12,7 @@ import ipaddress
 
 
 class SocketInstrument:
-    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True):
+    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True, verbose_error_check=True):
         """
         Open socket connection with settings for instrument control.
 
@@ -41,11 +41,12 @@ class SocketInstrument:
         self.instId = self.query('*idn?')
 
         # Enable verbose error checking of instrument supports this
-        try:
-            self.write('syst:err:verbose 1')
-            self.err_check()
-        except SockInstError:
-            pass
+        if verbose_error_check:
+            try:
+                self.write('syst:err:verbose 1')
+                self.err_check()
+            except SockInstError:
+                pass
 
     def disconnect(self):
         """Gracefully close socket connection."""
