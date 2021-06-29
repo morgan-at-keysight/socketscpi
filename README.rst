@@ -29,7 +29,7 @@ Features
 * Implements write, read, query, binary block read, binary block write
 
 
-* Free software: GNU General Public License v3
+* Free software: MIT License
 * Documentation: https://socketscpi.readthedocs.io/en/latest/index.html
 
 
