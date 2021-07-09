@@ -230,6 +230,9 @@ class SocketInstrument:
         <yyy> is the number of bytes to transfer. """
 
         numBytes = memoryview(data).nbytes
+        if numBytes >= 1e9:
+            raise BinblockError(f"Maximum binblockwrite length is 1 GB, requested data length is {numBytes/1e9} GB.")
+
         return f'#{len(str(numBytes))}{numBytes}'
 
     def binblockwrite(self, cmd, data, debug=False, esr=True):
@@ -257,7 +260,7 @@ class SocketInstrument:
         # Send message, header, data, and termination
         self.socket.send(cmd.encode('latin_1'))
         self.socket.send(header.encode('latin_1'))
-        self.socket.send(data)
+        self.socket.sendall(data)
         self.socket.send(b'\n')
 
         if debug:
