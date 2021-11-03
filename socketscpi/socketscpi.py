@@ -12,7 +12,7 @@ import ipaddress
 
 
 class SocketInstrument:
-    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True):
+    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True, globalErrCheck=False):
         """
         Open socket connection with settings for instrument control.
 
@@ -21,9 +21,13 @@ class SocketInstrument:
             port (int): Port used by the instrument to facilitate socket communication (Keysight equipment uses port 5025 by default).
             timeout (int): Timeout in seconds.
             noDelay (bool): True sends data immediately without concatenating multiple packets together. Just leave this alone.
+            globalErrCheck (bool): Determines if error checking will be done automatically after calling class methods.
         """
         # Validate IP address (will raise an error if given an invalid address).
         ipaddress.ip_address(ipAddress)
+
+        self.globalErrCheck = globalErrCheck
+        self.timeout = timeout
 
         # Create socket object
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -38,11 +42,11 @@ class SocketInstrument:
         self.socket.connect((ipAddress, port))
 
         # Get the instrument ID
-        self.instId = self.query('*idn?')
+        self.instId = self.query('*idn?', errCheck=False)
 
         # Enable verbose error checking of instrument supports this
         try:
-            self.write('syst:err:verbose 1')
+            self.write('syst:err:verbose 1', errCheck=False)
             self.err_check()
         except SockInstError:
             pass
@@ -52,13 +56,13 @@ class SocketInstrument:
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
 
-
-    def write(self, cmd):
+    def write(self, cmd, errCheck=True):
         """
         Writes a command to the instrument.
 
         Args:
             cmd (string): Documented SCPI command to be sent to the instrument.
+            errCheck (bool): Local error check flag. Auto error checking will only be done if both global and local error checking is enabled.
         """
 
         if not isinstance(cmd, str):
@@ -70,6 +74,10 @@ class SocketInstrument:
         # ret = self.query(msg)
         # if (int(ret) != 0):
         #     raise SockInstError('esr non-zero: {}'.format(ret))
+
+        if errCheck and self.globalErrCheck:
+            print(f'WRITE - local: {errCheck}, global: {self.globalErrCheck}, cmd: {cmd}')
+            self.err_check()
 
     def read(self):
         """
@@ -85,12 +93,13 @@ class SocketInstrument:
         # Strip out whitespace and return.
         return response.decode('latin_1').strip()
 
-    def query(self, cmd):
+    def query(self, cmd, errCheck=True):
         """
         Sends query to instrument and reads the output buffer immediately afterward.
 
         Args:
             cmd (string): Documented SCPI query to be sent to instrument (should end in a "?" character).
+            errCheck (bool): Local error check flag. Auto error checking will only be done if both global and local error checking is enabled.
 
         Returns (string): Response from instrument's output buffer as a latin_1-encoded string.
         """
@@ -100,8 +109,17 @@ class SocketInstrument:
         if '?' not in cmd:
             raise SockInstError('Query must include "?"')
 
-        self.write(cmd)
-        return self.read()
+        self.write(cmd, errCheck=False)
+        try:
+            result = self.read()
+        except socket.timeout:
+            self.err_check()
+
+        if errCheck and self.globalErrCheck:
+            print(f'QUERY - local: {errCheck}, global: {self.globalErrCheck}, cmd: {cmd}')
+            self.err_check()
+
+        return result
 
     def err_check(self):
         """Prints out all errors and clears error queue. Raises SockInstError with the info of the error encountered."""
@@ -115,16 +133,16 @@ class SocketInstrument:
             cmd = 'SYST:ERR?'
 
         # Strip out extra characters
-        temp = self.query(cmd).strip().replace('+', '').replace('-', '')
+        temp = self.query(cmd, errCheck=False).strip().replace('+', '').replace('-', '')
         # Read all errors until none are left
         while temp != '0,"No error"':
             # Build list of errors
             err.append(temp)
-            temp = self.query('syst:err?').strip().replace('+', '').replace('-', '')
+            temp = self.query(cmd, errCheck=False).strip().replace('+', '').replace('-', '')
         if err:
             raise SockInstError(err)
 
-    def binblockread(self, cmd, datatype='b', debug=False):
+    def binblockread(self, cmd, datatype='b', debug=False, errCheck=True):
         """
         Send a command and parses response in IEEE 488.2 binary block format.
 
@@ -147,6 +165,7 @@ class SocketInstrument:
             datatype (string): Data type for the returned data. Uses the same naming convention as Python's struct module
                 https://docs.python.org/3/library/struct.html#format-characters
             debug (bool): Turns debug mode on or off.
+            errCheck (bool): Local error check flag. Auto error checking will only be done if both global and local error checking is enabled.
 
         Returns (NumPy ndarray): Array containing the data from the instrument buffer.
 
@@ -177,11 +196,17 @@ class SocketInstrument:
             raise BinblockError('Invalid data type selected.')
 
         # Send command/query
-        self.write(cmd)
+        self.write(cmd, errCheck=False)
 
         # Read # character, raise exception if not present.
-        if self.socket.recv(1) != b'#':
-            raise BinblockError('Data in buffer is not in binblock format.')
+        try:
+            self.socket.settimeout(1)
+            if self.socket.recv(1) != b'#':
+                raise BinblockError('Data in buffer is not in binblock format.')
+        except socket.timeout:
+            self.err_check()
+        finally:
+            self.socket.settimeout(self.timeout)
 
         # Extract header length and number of bytes in binblock.
         headerLength = int(self.socket.recv(1).decode('latin_1'), 16)
@@ -216,6 +241,10 @@ class SocketInstrument:
                 term, len(rawData)))
             raise BinblockError('Data not terminated correctly.')
 
+        if errCheck and self.globalErrCheck:
+            print(f'BINBLOCKREAD - local: {errCheck}, global: {self.globalErrCheck}')
+            self.err_check()
+
         # Convert binary data to NumPy array of specified data type and return.
         return np.frombuffer(rawData, dtype=dtype)
 
@@ -235,7 +264,7 @@ class SocketInstrument:
 
         return f'#{len(str(numBytes))}{numBytes}'
 
-    def binblockwrite(self, cmd, data, debug=False, esr=True):
+    def binblockwrite(self, cmd, data, debug=False, errCheck=True):
         """
         Sends a command and payload data with IEEE 488.2 binary block format
 
@@ -251,8 +280,8 @@ class SocketInstrument:
             cmd (string): SCPI command used to send data to instrument as a binary block.
             data (NumPy ndarray): NumPy array containing data to load into the instrument.
             debug (bool): Turns debug mode on or off.
-            esr (bool): Determines whether to append an ESR query to the end of the binblockwrite for error checking purposes.
-        """
+            errCheck (bool): Local error check flag. Auto error checking will only be done if both global and local error checking is enabled.
+       """
 
         # Generate binary block header from data
         header = self.binblock_header(data)
@@ -267,12 +296,11 @@ class SocketInstrument:
             print(f'binblockwrite --')
             print(f'msg: {cmd}')
             print(f'header: {header}')
+        
+        if errCheck and self.globalErrCheck:
+            print(f'BINBLOCKWRITE - local: {errCheck}, global: {self.globalErrCheck}')
+            self.err_check()
 
-        # Check error status register and notify of problems
-        if esr:
-            r = self.query('*esr?')
-            if int(r) is not 0:
-                self.err_check()
 
 
 class SockInstError(Exception):
