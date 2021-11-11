@@ -52,7 +52,6 @@ class SocketInstrument:
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
 
-
     def write(self, cmd):
         """
         Writes a command to the instrument.
@@ -78,12 +77,23 @@ class SocketInstrument:
         Returns (string): Contents of the instrument's output buffer.
         """
 
-        response = b''
-        while response[-1:] != b'\n':
-            response += self.socket.recv(1024)
+        response = ''
+        done = False
+        while not done:
+            chunk = self.socket.recv(1024).decode('latin_1')
+            if not chunk:
+                raise IOError("No data received")
+            elif chunk[-1:] == '\n':
+                done = True
+            response += chunk.strip()
+        return response
 
-        # Strip out whitespace and return.
-        return response.decode('latin_1').strip()
+        # response = b''
+        # while response[-1:] != b'\n':
+        #     response += self.socket.recv(1024)
+
+        # # Strip out whitespace and return.
+        # return response.decode('latin_1').strip()
 
     def query(self, cmd):
         """
@@ -120,7 +130,8 @@ class SocketInstrument:
         while temp != '0,"No error"':
             # Build list of errors
             err.append(temp)
-            temp = self.query('syst:err?').strip().replace('+', '').replace('-', '')
+            temp = self.query('syst:err?').strip().replace(
+                '+', '').replace('-', '')
         if err:
             raise SockInstError(err)
 
@@ -231,7 +242,8 @@ class SocketInstrument:
 
         numBytes = memoryview(data).nbytes
         if numBytes >= 1e9:
-            raise BinblockError(f"Maximum binblockwrite length is 1 GB, requested data length is {numBytes/1e9} GB.")
+            raise BinblockError(
+                f"Maximum binblockwrite length is 1 GB, requested data length is {numBytes/1e9} GB.")
 
         return f'#{len(str(numBytes))}{numBytes}'
 
