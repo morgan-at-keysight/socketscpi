@@ -24,6 +24,10 @@ To check for and print out errors, do something like this::
     except socketscpi.SockInstError as e:
         print(str(e))
 
+When you're finished communicating with your instrument, close it gracefully like this::
+
+    instrument.close()
+
 ====================
 **SocketInstrument**
 ====================
@@ -45,11 +49,11 @@ Class constructor that connects to the test equipment and returns a SocketInstru
 * ``socketscpi.SocketInstrument``: Instrument object to be used for communication and control.
 
 
-**disconnect**
+**close**
 --------------
 ::
 
-    SocketInstrument.disconnect()
+    SocketInstrument.close()
 
 Gracefully closes socket connection.
 
@@ -131,11 +135,11 @@ Prints out all errors and clears error queue. Raises SockInstError with the info
 * None
 
 
-**binblockread**
-----------------
+**query_binary_values**
+-----------------------
 ::
 
-    SocketInstrument.binblockread(cmd, datatype='b')
+    SocketInstrument.query_binary_values(cmd, datatype='b')
 
 Sends a query and parses response in IEEE 488.2 binary block format.
 
@@ -149,11 +153,11 @@ Sends a query and parses response in IEEE 488.2 binary block format.
 * ``(NumPy ndarray)`` Array containing the data from the instrument buffer.
 
 
-**binblockwrite**
------------------
+**write_binary_values**
+-----------------------
 ::
 
-    SocketInstrument.binblockwrite(cmd, data)
+    SocketInstrument.write_binary_values(cmd, data)
 
 Sends a command and payload data in IEEE 488.2 binary block format.
 
@@ -161,7 +165,7 @@ Sends a command and payload data in IEEE 488.2 binary block format.
 
 * ``cmd`` ``(string)``: SCPI command used to send data to instrument as a binary block.
 * ``data`` ``(NumPy ndarray)``: Data to be sent to the instrument. Refer to the documentation of the SCPI command being used for correct argument formatting.
-* ``esr`` ``(bool)``: Determines whether to append an ESR query to the end of the binblockwrite for error checking purposes.
+* ``esr`` ``(bool)``: Determines whether to append an ESR query to the end of the binary block write for error checking purposes.
 
 **Returns**
 

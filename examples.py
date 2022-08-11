@@ -25,7 +25,7 @@ def awg_example(ipAddress, port=5025):
     wfm = np.array(2047 * np.sin(2 * np.pi * freq * t), dtype=np.int16) << 4
 
     awg.write(f'trace:def 1, {rl}')
-    awg.binblockwrite('trace:data 1, 0, ', wfm)
+    awg.write_binary_values('trace:data 1, 0, ', wfm)
 
     awg.write('trace:select 1')
     awg.write('init:cont on')
@@ -33,7 +33,7 @@ def awg_example(ipAddress, port=5025):
     awg.query('*opc?')
 
     awg.err_check()
-    awg.disconnect()
+    awg.close()
 
 
 def vna_example(ipAddress, port=5025):
@@ -58,14 +58,14 @@ def vna_example(ipAddress, port=5025):
     vna.write('format:border swap')
     vna.write('format real,64')
 
-    meas = vna.binblockread('calculate1:data? fdata', datatype='d')
+    meas = vna.query_binary_values('calculate1:data? fdata', datatype='d')
     vna.query('*opc?')
 
-    freq = vna.binblockread('calculate1:x?', datatype='d')
+    freq = vna.query_binary_values('calculate1:x?', datatype='d')
     vna.query('*opc?')
 
     vna.err_check()
-    vna.disconnect()
+    vna.close()
 
     return freq, meas
 
@@ -102,7 +102,7 @@ def scope_example(ipAddress):
     scope.write('digitize')
 
     # Transfer binary waveform data from scope
-    data = scope.binblockread('waveform:data?', datatype='b')
+    data = scope.query_binary_values('waveform:data?', datatype='b')
 
     # Query x and y values to scale the data appropriately for plotting
     xIncrement = float(scope.query('waveform:xincrement?'))
@@ -116,15 +116,15 @@ def scope_example(ipAddress):
     wfm = [(d * yIncrement) + yOrigin for d in data]
 
     # Check for errors
-    scope.disconnect()
+    scope.close()
 
     return time, wfm
 
 
 def main():
-    # awg_example('10.112.181.139', port=5025)
-    # vna_example('10.112.181.177', port=5025)
-    scope_example('141.121.210.161')
+    # awg_example('127.0.0.1', port=5025)
+    vna_example('127.0.0.1', port=5025)
+    # scope_example('141.121.210.161')
 
 if __name__ == '__main__':
     main()
