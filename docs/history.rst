@@ -21,3 +21,8 @@ History
 ----------------------
 
 * Adjusted the error checking for the ``.query()`` method to account for SCPI queries that require additional arguments.
+
+2022.08.0 (2022-08-11)
+----------------------
+
+* Renamed ``binblockwrite()``, ``binblockread()``, and ``disconnect()`` to ``write_binary_values()``, ``read_binary_values()``, and ``close()``, respectively, to match the function calls in PyVISA.

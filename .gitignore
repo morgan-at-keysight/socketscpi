@@ -104,4 +104,4 @@ ENV/
 # custom
 playground.py
 .vscode
-socketscpi-venv
+socketscpi-venv*

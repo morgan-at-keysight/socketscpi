@@ -6,6 +6,7 @@ It handles sending commands, receiving query results,
 reading/writing binary block data, and checking for errors.
 """
 
+import warnings
 import socket
 import numpy as np
 import ipaddress
@@ -52,6 +53,13 @@ class SocketInstrument:
             pass
 
     def disconnect(self):
+        """DEPRECATED. THIS IS A PASS-THROUGH FUNCTION ONLY."""
+
+        warnings.warn("socketscpi.binblockread() is deprecated. Use socketscpi.query_binary_values() instead.")
+
+        return self.close()
+
+    def close(self):
         """Gracefully close socket connection."""
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
@@ -143,11 +151,15 @@ class SocketInstrument:
             raise SockInstError(err)
 
     def binblockread(self, cmd, datatype='b', debug=False, errCheck=True):
+        """DEPRECATED. THIS IS A PASS-THROUGH FUNCTION ONLY."""
+
+        warnings.warn("socketscpi.binblockread() is deprecated. Use socketscpi.query_binary_values() instead.")
+
+        return self.query_binary_values(cmd, datatype=datatype, debug=debug, errCheck=errCheck)
+
+    def query_binary_values(self, cmd, datatype='b', debug=False, errCheck=True):
         """
         Send a command and parses response in IEEE 488.2 binary block format.
-
-        cmd: string containing SCPI command
-        datatype:
 
         The waveform is formatted as:
         #<x><yyy><data><newline>, where:
@@ -265,6 +277,13 @@ class SocketInstrument:
         return f'#{len(str(numBytes))}{numBytes}'
 
     def binblockwrite(self, cmd, data, debug=False, errCheck=True):
+        """DEPRECATED. THIS IS A PASS-THROUGH FUNCTION ONLY."""
+
+        warnings.warn("socketscpi.binblockwrite() is deprecated. Use socketscpi.write_binary_values() instead.")
+
+        return self.write_binary_values(cmd, data, debug=debug, errCheck=errCheck)
+
+    def write_binary_values(self, cmd, data, debug=False, errCheck=True):
         """
         Sends a command and payload data with IEEE 488.2 binary block format
 
