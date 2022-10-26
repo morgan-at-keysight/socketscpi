@@ -135,7 +135,7 @@ class SocketInstrument:
         err = []
 
         # syst:err? response format varies between instruments, so remove whitespace and extra characters before checking
-        if 'mso' in self.instId.lower() or 'dso' in self.instId.lower():
+        if 'mso' in self.instId.lower() or 'dso' in self.instId.lower() or 'uxr' in self.instId.lower():
             cmd = 'SYST:ERR? string'
         else:
             cmd = 'SYST:ERR?'
