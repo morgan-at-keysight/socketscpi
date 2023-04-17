@@ -33,7 +33,7 @@ When you're finished communicating with your instrument, close it gracefully lik
 ====================
 ::
 
-    socketscpi.SocketInstrument(host, port=5025, timeout=10, noDelay=True)
+    socketscpi.SocketInstrument(host, port=5025, timeout=10, noDelay=True, globalErrCheck=False, verboseErrCheck=True)
 
 Class constructor that connects to the test equipment and returns a SocketInstrument object that can be used to communicate with the equipment.
 
@@ -43,6 +43,8 @@ Class constructor that connects to the test equipment and returns a SocketInstru
 * ``port`` ``(int)``:  Port used by the instrument to facilitate socket communication (Keysight equipment uses port 5025 by default).
 * ``timeout`` ``(int)``: Timeout in seconds. This is how long the instrument will wait before sending a timeout error in response to a command or query. Argument is an int. Default is ``10``.
 * ``noDelay`` ``(bool)``: True turns on the TCP_NODELAY flag, which sends data immediately without concatenating multiple packets together. Just leave this alone.
+* ``globalErrCheck`` ``(bool)``: Determines if error checking will be done automatically after calling class methods.
+* ``verboseErrCheck`` ``(bool)``: Determines if verbose error checking will be attempted.
 
 **Returns**
 

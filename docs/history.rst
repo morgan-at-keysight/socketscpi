@@ -26,3 +26,8 @@ History
 ----------------------
 
 * Renamed ``binblockwrite()``, ``binblockread()``, and ``disconnect()`` to ``write_binary_values()``, ``read_binary_values()``, and ``close()``, respectively, to match the function calls in PyVISA.
+
+2023.04.0 (2023-04-17)
+----------------------
+
+* Added error checking syntax for UXR scopes. Added an argument in the ``SocketInstrument`` constructor to allow user to decide if verbose error checking will be attempted.
