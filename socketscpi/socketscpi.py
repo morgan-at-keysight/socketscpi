@@ -13,7 +13,7 @@ import ipaddress
 
 
 class SocketInstrument:
-    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True, globalErrCheck=False):
+    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True, globalErrCheck=False, verboseErrCheck=True):
         """
         Open socket connection with settings for instrument control.
 
@@ -23,6 +23,7 @@ class SocketInstrument:
             timeout (int): Timeout in seconds.
             noDelay (bool): True sends data immediately without concatenating multiple packets together. Just leave this alone.
             globalErrCheck (bool): Determines if error checking will be done automatically after calling class methods.
+            verboseErrCheck (bool): Determines if verbose error checking will be attempted.
         """
         # Validate IP address (will raise an error if given an invalid address).
         ipaddress.ip_address(ipAddress)
@@ -45,12 +46,13 @@ class SocketInstrument:
         # Get the instrument ID
         self.instId = self.query('*idn?', errCheck=False)
 
-        # Enable verbose error checking of instrument supports this
-        try:
-            self.write('syst:err:verbose 1', errCheck=False)
-            self.err_check()
-        except SockInstError:
-            pass
+        # Enable verbose error checking of instrument supports this and if user desires
+        if verboseErrCheck:
+            try:
+                self.write('syst:err:verbose 1', errCheck=False)
+                self.err_check()
+            except SockInstError:
+                pass
 
     def disconnect(self):
         """DEPRECATED. THIS IS A PASS-THROUGH FUNCTION ONLY."""
