@@ -31,3 +31,9 @@ History
 ----------------------
 
 * Added error checking syntax for UXR scopes. Added an argument in the ``SocketInstrument`` constructor to allow user to decide if verbose error checking will be attempted.
+
+2023.06.0 (2023-06-13)
+----------------------
+
+* Relaxed error checking to account for different "No error" responses from different instrument vendors. Updated comments.
+  
