@@ -57,7 +57,7 @@ class SocketInstrument:
     def disconnect(self):
         """DEPRECATED. THIS IS A PASS-THROUGH FUNCTION ONLY."""
 
-        warnings.warn("socketscpi.binblockread() is deprecated. Use socketscpi.query_binary_values() instead.")
+        warnings.warn("socketscpi.disconnect() is deprecated. Use socketscpi.close() instead.")
 
         return self.close()
 
@@ -136,16 +136,17 @@ class SocketInstrument:
 
         err = []
 
-        # syst:err? response format varies between instruments, so remove whitespace and extra characters before checking
+        # syst:err? syntax varies between instruments, so adjust syntax for Keysight oscilloscopes
         if 'mso' in self.instId.lower() or 'dso' in self.instId.lower() or 'uxr' in self.instId.lower():
             cmd = 'SYST:ERR? string'
         else:
             cmd = 'SYST:ERR?'
 
-        # Strip out extra characters
+        # syst:err? response format varies between instrument families, so remove whitespace and extra characters before checking
         temp = self.query(cmd, errCheck=False).strip().replace('+', '').replace('-', '')
-        # Read all errors until none are left
-        while temp != '0,"No error"':
+
+        # Read all errors until none are left. Generally, instruments return a message that begins with the string '0,"No error'.
+        while '0,"No error' not in temp:
             # Build list of errors
             err.append(temp)
             temp = self.query(cmd, errCheck=False).strip().replace('+', '').replace('-', '')
@@ -285,7 +286,7 @@ class SocketInstrument:
 
         return self.write_binary_values(cmd, data, debug=debug, errCheck=errCheck)
 
-    def write_binary_values(self, cmd, data, debug=False, errCheck=True):
+    def write_binary_values(self, cmd, data, debug=False, errCheck=True, *args, **kwargs):
         """
         Sends a command and payload data with IEEE 488.2 binary block format
 
@@ -302,6 +303,8 @@ class SocketInstrument:
             data (NumPy ndarray): NumPy array containing data to load into the instrument.
             debug (bool): Turns debug mode on or off.
             errCheck (bool): Local error check flag. Auto error checking will only be done if both global and local error checking is enabled.
+        
+        *args and **kwargs added to allow for pyvisa syntax compatibility
        """
 
         # Generate binary block header from data
@@ -321,7 +324,6 @@ class SocketInstrument:
         if errCheck and self.globalErrCheck:
             print(f'BINBLOCKWRITE - local: {errCheck}, global: {self.globalErrCheck}')
             self.err_check()
-
 
 
 class SockInstError(Exception):
