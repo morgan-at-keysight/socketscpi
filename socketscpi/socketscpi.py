@@ -6,14 +6,17 @@ It handles sending commands, receiving query results,
 reading/writing binary block data, and checking for errors.
 """
 
+import logging.config
 import warnings
 import socket
 import numpy as np
 import ipaddress
+import logging
+from functools import wraps
 
 
 class SocketInstrument:
-    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True, globalErrCheck=False, verboseErrCheck=True):
+    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True, globalErrCheck=False, verboseErrCheck=True, logFile=r'C:\Temp\log.txt'):
         """
         Open socket connection with settings for instrument control.
 
@@ -24,7 +27,11 @@ class SocketInstrument:
             noDelay (bool): True sends data immediately without concatenating multiple packets together. Just leave this alone.
             globalErrCheck (bool): Determines if error checking will be done automatically after calling class methods.
             verboseErrCheck (bool): Determines if verbose error checking will be attempted.
+            logFile (str): Absolute file path to save log file.
         """
+        
+        logging.basicConfig(filename=logFile, level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+        
         # Validate IP address (will raise an error if given an invalid address).
         ipaddress.ip_address(ipAddress)
 
@@ -54,6 +61,13 @@ class SocketInstrument:
             except SockInstError:
                 pass
 
+    def log_arguments(func):
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            logging.debug(f"Arguments for {func.__name__}: {args}, {kwargs}")
+            return func(self, *args, **kwargs)
+        return wrapper
+
     def disconnect(self):
         """DEPRECATED. THIS IS A PASS-THROUGH FUNCTION ONLY."""
 
@@ -66,6 +80,7 @@ class SocketInstrument:
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
 
+    @log_arguments
     def write(self, cmd, errCheck=True):
         """
         Writes a command to the instrument.
@@ -137,16 +152,20 @@ class SocketInstrument:
         err = []
 
         # syst:err? syntax varies between instruments, so adjust syntax for Keysight oscilloscopes
-        if 'mso' in self.instId.lower() or 'dso' in self.instId.lower() or 'uxr' in self.instId.lower():
-            cmd = 'SYST:ERR? string'
-        else:
-            cmd = 'SYST:ERR?'
+        # if 'mso' in self.instId.lower() or 'dso' in self.instId.lower() or 'uxr' in self.instId.lower():
+        #     cmd = 'SYST:ERR? string'
+        # else:
+        #     cmd = 'SYST:ERR?'
+
+        cmd = 'system:error?'
 
         # syst:err? response format varies between instrument families, so remove whitespace and extra characters before checking
         temp = self.query(cmd, errCheck=False).strip().replace('+', '').replace('-', '')
 
         # Read all errors until none are left. Generally, instruments return a message that begins with the string '0,"No error'.
         while '0,"No error' not in temp:
+            # Log each error message
+            logging.error(temp)
             # Build list of errors
             err.append(temp)
             temp = self.query(cmd, errCheck=False).strip().replace('+', '').replace('-', '')
@@ -160,6 +179,7 @@ class SocketInstrument:
 
         return self.query_binary_values(cmd, datatype=datatype, debug=debug, errCheck=errCheck)
 
+    @log_arguments
     def query_binary_values(self, cmd, datatype='b', debug=False, errCheck=True):
         """
         Send a command and parses response in IEEE 488.2 binary block format.
