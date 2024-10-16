@@ -135,12 +135,7 @@ class SocketInstrument:
         """Prints out all errors and clears error queue. Raises SockInstError with the info of the error encountered."""
 
         err = []
-
-        # syst:err? syntax varies between instruments, so adjust syntax for Keysight oscilloscopes
-        if 'mso' in self.instId.lower() or 'dso' in self.instId.lower() or 'uxr' in self.instId.lower():
-            cmd = 'SYST:ERR? string'
-        else:
-            cmd = 'SYST:ERR?'
+        cmd = 'SYST:ERR?'
 
         # syst:err? response format varies between instrument families, so remove whitespace and extra characters before checking
         temp = self.query(cmd, errCheck=False).strip().replace('+', '').replace('-', '')
