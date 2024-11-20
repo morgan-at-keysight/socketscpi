@@ -13,7 +13,7 @@ socketscpi
         :target: https://socketscpi.readthedocs.io/en/latest/?badge=latest
         :alt: Documentation Status
 
-
+Current version: 2024.11.0
 
 Tired of troubleshooting VISA connections, conflicts, and incompatibilities?
 
