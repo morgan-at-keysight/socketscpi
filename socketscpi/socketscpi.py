@@ -16,7 +16,7 @@ from functools import wraps
 
 
 class SocketInstrument:
-    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True, globalErrCheck=False, verboseErrCheck=True, log=False, logFile=r'C:\Temp\log.txt'):
+    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True, globalErrCheck=False, verboseErrCheck=False, log=False, logFile=r'C:\Temp\log.txt'):
         """
         Open socket connection with settings for instrument control.
 
@@ -33,10 +33,15 @@ class SocketInstrument:
         
         self.log = log
         
+        self.logger = logging.getLogger(__name__)
+        
         if self.log:
             # Allows writing of entire arrays rather than truncated arrays when logging the return from query_binary_values()
             np.set_printoptions(threshold=np.inf)
             logging.basicConfig(filename=logFile, level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+        else:
+            self.logger.addHandler(logging.NullHandler())
+            self.logger.propagate = False
         
         # Validate IP address (will raise an error if given an invalid address).
         ipaddress.ip_address(ipAddress)
@@ -68,7 +73,7 @@ class SocketInstrument:
                 pass
     
     def log_arguments_and_returns(func):
-        """Decorator for logging arguments, keyword arguments, and return variables from methods."""
+        """Decorator for logging arguments, keyword arguments, and return variables from class methods."""
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             result = func(self, *args, **kwargs)
@@ -84,7 +89,7 @@ class SocketInstrument:
         return wrapper
 
     def log_arguments_only(func):
-        """Decorator for logging arguments and keyword arguments from methods."""
+        """Decorator for logging arguments and keyword arguments from class methods."""
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             result = func(self, *args, **kwargs)

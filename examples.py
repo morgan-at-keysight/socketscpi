@@ -38,7 +38,7 @@ def awg_example(ipAddress, port=5025):
 
 def vna_example(ipAddress, port=5025):
     """Test generic VNA connection, sweep control, and data transfer."""
-    vna = socketscpi.SocketInstrument(ipAddress=ipAddress, port=port, timeout=10)
+    vna = socketscpi.SocketInstrument(ipAddress=ipAddress, port=port, timeout=10, log=False)
     print(vna.instId)
 
     vna.write('system:fpreset')

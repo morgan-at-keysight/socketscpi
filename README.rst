@@ -18,7 +18,6 @@ Current version: 2024.11.0
 Tired of troubleshooting VISA connections, conflicts, and incompatibilities?
 
 Need the fastest communication possible with your test equipment?
-
 Try socketscpi: a robust and easy-to-use SCPI interface for electronic test and measurement equipment.
 
 Socketscpi is a wrapper for Python's socket module. This removes the requirement for VISA and improves data transfer speed over the older VXI-11 protocol.
