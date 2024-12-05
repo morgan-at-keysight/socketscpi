@@ -36,4 +36,15 @@ History
 ----------------------
 
 * Relaxed error checking to account for different "No error" responses from different instrument vendors. Updated comments.
-  
+
+
+2023.10.0 (2023-10-16)
+----------------------
+
+* Fixed a bug where socketscpi.err_check() would get stuck in an endless loop when controlling Keysight oscilloscopes.
+
+2024.12.0 (2024-12-04)
+----------------------
+
+* Added logging functionality.
+

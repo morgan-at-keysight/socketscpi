@@ -38,7 +38,7 @@ def awg_example(ipAddress, port=5025):
 
 def vna_example(ipAddress, port=5025):
     """Test generic VNA connection, sweep control, and data transfer."""
-    vna = socketscpi.SocketInstrument(ipAddress=ipAddress, port=port, timeout=10)
+    vna = socketscpi.SocketInstrument(ipAddress=ipAddress, port=port, timeout=10, log=False)
     print(vna.instId)
 
     vna.write('system:fpreset')
@@ -70,9 +70,9 @@ def vna_example(ipAddress, port=5025):
     return freq, meas
 
 
-def scope_example(ipAddress):
+def scope_example(ipAddress, port=5025):
     # Make connection to instrument
-    scope = socketscpi.SocketInstrument(ipAddress)
+    scope = socketscpi.SocketInstrument(ipAddress, port=port, log=True)
 
     # Measurement setup variables
     vRange = 2
@@ -116,6 +116,7 @@ def scope_example(ipAddress):
     wfm = [(d * yIncrement) + yOrigin for d in data]
 
     # Check for errors
+    scope.err_check()
     scope.close()
 
     return time, wfm
@@ -123,8 +124,8 @@ def scope_example(ipAddress):
 
 def main():
     # awg_example('127.0.0.1', port=5025)
-    vna_example('127.0.0.1', port=5025)
-    # scope_example('141.121.210.161')
+    # vna_example('127.0.0.1', port=5025)
+    scope_example('192.168.4.195', port=5025)
 
 if __name__ == '__main__':
     main()

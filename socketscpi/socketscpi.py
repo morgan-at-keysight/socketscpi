@@ -6,14 +6,17 @@ It handles sending commands, receiving query results,
 reading/writing binary block data, and checking for errors.
 """
 
+import logging.config
 import warnings
 import socket
 import numpy as np
 import ipaddress
+import logging
+from functools import wraps
 
 
 class SocketInstrument:
-    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True, globalErrCheck=False, verboseErrCheck=True):
+    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True, globalErrCheck=False, verboseErrCheck=False, log=False, logFile=r'C:\Temp\log.txt'):
         """
         Open socket connection with settings for instrument control.
 
@@ -24,7 +27,22 @@ class SocketInstrument:
             noDelay (bool): True sends data immediately without concatenating multiple packets together. Just leave this alone.
             globalErrCheck (bool): Determines if error checking will be done automatically after calling class methods.
             verboseErrCheck (bool): Determines if verbose error checking will be attempted.
+            log (bool): Turns logging on or off.
+            logFile (str): Absolute file path to save log file.
         """
+        
+        self.log = log
+        
+        self.logger = logging.getLogger(__name__)
+        
+        if self.log:
+            # Allows writing of entire arrays rather than truncated arrays when logging the return from query_binary_values()
+            np.set_printoptions(threshold=np.inf)
+            logging.basicConfig(filename=logFile, level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+        else:
+            self.logger.addHandler(logging.NullHandler())
+            self.logger.propagate = False
+        
         # Validate IP address (will raise an error if given an invalid address).
         ipaddress.ip_address(ipAddress)
 
@@ -53,6 +71,36 @@ class SocketInstrument:
                 self.err_check()
             except SockInstError:
                 pass
+    
+    def log_arguments_and_returns(func):
+        """Decorator for logging arguments, keyword arguments, and return variables from class methods."""
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            result = func(self, *args, **kwargs)
+            log_string = f"socketscpi.SocketInstrument.{func.__name__}():"
+            if args:
+                log_string += f' Args: {args}'
+            if kwargs:
+                log_string += f' Keyword args: {kwargs}'
+            if result:
+                log_string += f' Returns: {result}'
+            logging.debug(log_string)
+            return result
+        return wrapper
+
+    def log_arguments_only(func):
+        """Decorator for logging arguments and keyword arguments from class methods."""
+        @wraps(func)
+        def wrapper(self, *args, **kwargs):
+            result = func(self, *args, **kwargs)
+            log_string = f"socketscpi.SocketInstrument.{func.__name__}():"
+            if args:
+                log_string += f' Args: {args}'
+            if kwargs:
+                log_string += f' Keyword args: {kwargs}'
+            logging.debug(log_string)
+            return result
+        return wrapper
 
     def disconnect(self):
         """DEPRECATED. THIS IS A PASS-THROUGH FUNCTION ONLY."""
@@ -66,6 +114,7 @@ class SocketInstrument:
         self.socket.shutdown(socket.SHUT_RDWR)
         self.socket.close()
 
+    @log_arguments_only
     def write(self, cmd, errCheck=True):
         """
         Writes a command to the instrument.
@@ -89,6 +138,21 @@ class SocketInstrument:
             print(f'WRITE - local: {errCheck}, global: {self.globalErrCheck}, cmd: {cmd}')
             self.err_check()
 
+    def read_no_logging(self):
+        """
+        Reads the output buffer of the instrument.
+
+        Returns (string): Contents of the instrument's output buffer.
+        """
+
+        response = b''
+        while response[-1:] != b'\n':
+            response += self.socket.recv(1024)
+
+        # Strip out whitespace and return.
+        return response.decode('latin_1').strip()
+
+    @log_arguments_and_returns
     def read(self):
         """
         Reads the output buffer of the instrument.
@@ -108,7 +172,7 @@ class SocketInstrument:
         Sends query to instrument and reads the output buffer immediately afterward.
 
         Args:
-            cmd (string): Documented SCPI query to be sent to instrument (should end in a "?" character).
+            cmd (string): Documented SCPI query to be sent to instrument (must end in a "?" character).
             errCheck (bool): Local error check flag. Auto error checking will only be done if both global and local error checking is enabled.
 
         Returns (string): Response from instrument's output buffer as a latin_1-encoded string.
@@ -135,13 +199,15 @@ class SocketInstrument:
         """Prints out all errors and clears error queue. Raises SockInstError with the info of the error encountered."""
 
         err = []
-        cmd = 'SYST:ERR?'
+        cmd = 'system:error?'
 
         # syst:err? response format varies between instrument families, so remove whitespace and extra characters before checking
         temp = self.query(cmd, errCheck=False).strip().replace('+', '').replace('-', '')
 
         # Read all errors until none are left. Generally, instruments return a message that begins with the string '0,"No error'.
         while '0,"No error' not in temp:
+            # Log each error message
+            logging.error(temp)
             # Build list of errors
             err.append(temp)
             temp = self.query(cmd, errCheck=False).strip().replace('+', '').replace('-', '')
@@ -155,6 +221,7 @@ class SocketInstrument:
 
         return self.query_binary_values(cmd, datatype=datatype, debug=debug, errCheck=errCheck)
 
+    @log_arguments_only
     def query_binary_values(self, cmd, datatype='b', debug=False, errCheck=True):
         """
         Send a command and parses response in IEEE 488.2 binary block format.
