@@ -77,7 +77,7 @@ class SocketInstrument:
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             result = func(self, *args, **kwargs)
-            log_string = f"socketscpi.SocketInstrument.{func.__name__}() debug info:"
+            log_string = f"socketscpi.SocketInstrument.{func.__name__}():"
             if args:
                 log_string += f' Args: {args}'
             if kwargs:
@@ -93,7 +93,7 @@ class SocketInstrument:
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             result = func(self, *args, **kwargs)
-            log_string = f"socketscpi.SocketInstrument.{func.__name__}() debug info:"
+            log_string = f"socketscpi.SocketInstrument.{func.__name__}():"
             if args:
                 log_string += f' Args: {args}'
             if kwargs:
