@@ -43,7 +43,7 @@ History
 
 * Fixed a bug where socketscpi.err_check() would get stuck in an endless loop when controlling Keysight oscilloscopes.
 
-2024.11.0 (2024-11-20)
+2024.12.0 (2024-12-04)
 ----------------------
 
 * Added logging functionality.
