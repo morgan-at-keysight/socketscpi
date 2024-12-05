@@ -199,7 +199,6 @@ class SocketInstrument:
         """Prints out all errors and clears error queue. Raises SockInstError with the info of the error encountered."""
 
         err = []
-
         cmd = 'system:error?'
 
         # syst:err? response format varies between instrument families, so remove whitespace and extra characters before checking
