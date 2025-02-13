@@ -12,11 +12,12 @@ import socket
 import numpy as np
 import ipaddress
 import logging
+from time import sleep
 from functools import wraps
 
 
 class SocketInstrument:
-    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True, globalErrCheck=False, verboseErrCheck=False, log=False, logFile=r'C:\Temp\log.txt'):
+    def __init__(self, ipAddress, port=5025, timeout=10, noDelay=True, globalErrCheck=False, log=False, logFile=r'C:\Temp\log.txt'):
         """
         Open socket connection with settings for instrument control.
 
@@ -30,19 +31,17 @@ class SocketInstrument:
             log (bool): Turns logging on or off.
             logFile (str): Absolute file path to save log file.
         """
-        
-        self.log = log
-        
+
         self.logger = logging.getLogger(__name__)
         
-        if self.log:
+        if log:
             # Allows writing of entire arrays rather than truncated arrays when logging the return from query_binary_values()
             np.set_printoptions(threshold=np.inf)
-            logging.basicConfig(filename=logFile, level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+            logging.basicConfig(filename=logFile, level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s', force=True)
         else:
             self.logger.addHandler(logging.NullHandler())
             self.logger.propagate = False
-        
+
         # Validate IP address (will raise an error if given an invalid address).
         ipaddress.ip_address(ipAddress)
 
@@ -63,28 +62,20 @@ class SocketInstrument:
 
         # Get the instrument ID
         self.instId = self.query('*idn?', errCheck=False)
-
-        # Enable verbose error checking of instrument supports this and if user desires
-        if verboseErrCheck:
-            try:
-                self.write('syst:err:verbose 1', errCheck=False)
-                self.err_check()
-            except SockInstError:
-                pass
     
     def log_arguments_and_returns(func):
         """Decorator for logging arguments, keyword arguments, and return variables from class methods."""
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             result = func(self, *args, **kwargs)
-            log_string = f"socketscpi.SocketInstrument.{func.__name__}():"
+            log_string = f"socketscpi.SocketInstrument.{func.__name__}() debug info:"
             if args:
                 log_string += f' Args: {args}'
             if kwargs:
                 log_string += f' Keyword args: {kwargs}'
             if result:
                 log_string += f' Returns: {result}'
-            logging.debug(log_string)
+            self.logger.debug(log_string)
             return result
         return wrapper
 
@@ -93,12 +84,12 @@ class SocketInstrument:
         @wraps(func)
         def wrapper(self, *args, **kwargs):
             result = func(self, *args, **kwargs)
-            log_string = f"socketscpi.SocketInstrument.{func.__name__}():"
+            log_string = f"socketscpi.SocketInstrument.{func.__name__}() debug info:"
             if args:
                 log_string += f' Args: {args}'
             if kwargs:
                 log_string += f' Keyword args: {kwargs}'
-            logging.debug(log_string)
+            self.logger.debug(log_string)
             return result
         return wrapper
 
@@ -115,12 +106,13 @@ class SocketInstrument:
         self.socket.close()
 
     @log_arguments_only
-    def write(self, cmd, errCheck=True):
+    def write(self, cmd, delay=None, errCheck=True):
         """
         Writes a command to the instrument.
 
         Args:
             cmd (string): Documented SCPI command to be sent to the instrument.
+            delay (float): Optional delay after each write call.
             errCheck (bool): Local error check flag. Auto error checking will only be done if both global and local error checking is enabled.
         """
 
@@ -129,13 +121,14 @@ class SocketInstrument:
 
         msg = '{}\n'.format(cmd)
         self.socket.send(msg.encode('latin_1'))
-        # msg = '{}\n*esr?'.format(cmd)
-        # ret = self.query(msg)
-        # if (int(ret) != 0):
-        #     raise SockInstError('esr non-zero: {}'.format(ret))
+
+        if delay:
+            if not isinstance(delay, (int, float)) or delay < 0:
+                raise ValueError(f'Invalid delay {delay}, must be a positive numerical value.')
+            sleep(delay)
 
         if errCheck and self.globalErrCheck:
-            print(f'WRITE - local: {errCheck}, global: {self.globalErrCheck}, cmd: {cmd}')
+            # self.logger.debug(f'WRITE - local: {errCheck}, global: {self.globalErrCheck}, cmd: {cmd}')
             self.err_check()
 
     def read_no_logging(self):
@@ -147,7 +140,7 @@ class SocketInstrument:
 
         response = b''
         while response[-1:] != b'\n':
-            response += self.socket.recv(1024)
+            response += self.socket.recv(4096)
 
         # Strip out whitespace and return.
         return response.decode('latin_1').strip()
@@ -162,7 +155,7 @@ class SocketInstrument:
 
         response = b''
         while response[-1:] != b'\n':
-            response += self.socket.recv(1024)
+            response += self.socket.recv(4096)
 
         # Strip out whitespace and return.
         return response.decode('latin_1').strip()
@@ -187,19 +180,35 @@ class SocketInstrument:
         try:
             result = self.read()
         except socket.timeout:
-            self.err_check()
+            self.logger.error(f'Timeout occurred during {cmd} query.')
 
         if errCheck and self.globalErrCheck:
-            print(f'QUERY - local: {errCheck}, global: {self.globalErrCheck}, cmd: {cmd}')
+            # self.logger.info(f'QUERY - local: {errCheck}, global: {self.globalErrCheck}, cmd: {cmd}')
             self.err_check()
 
         return result
 
+    def flush(self, timeout=1):
+        """Flushes the buffer.
+        
+        Args:
+            timeout (float): Sets a temporary timeout for the read() method.
+        """
+        
+        self.write('*cls')
+        try:
+            original_timeout = self.socket.gettimeout()
+            self.socket.settimeout(timeout)
+            self.read()
+            self.socket.settimeout(original_timeout)
+        except socket.timeout:
+            self.logger.info(f'Timeout reached during flush(). Nothing in buffer.')
+
     def err_check(self):
-        """Prints out all errors and clears error queue. Raises SockInstError with the info of the error encountered."""
+        """Prints out all errors and clears error queue. Raises SockInstError with the info of the error(s) encountered."""
 
         err = []
-        cmd = 'system:error?'
+        cmd = 'SYSTem:ERRor?'
 
         # syst:err? response format varies between instrument families, so remove whitespace and extra characters before checking
         temp = self.query(cmd, errCheck=False).strip().replace('+', '').replace('-', '')
@@ -207,7 +216,7 @@ class SocketInstrument:
         # Read all errors until none are left. Generally, instruments return a message that begins with the string '0,"No error'.
         while '0,"No error' not in temp:
             # Log each error message
-            logging.error(temp)
+            self.logger.error(temp)
             # Build list of errors
             err.append(temp)
             temp = self.query(cmd, errCheck=False).strip().replace('+', '').replace('-', '')
@@ -222,7 +231,7 @@ class SocketInstrument:
         return self.query_binary_values(cmd, datatype=datatype, debug=debug, errCheck=errCheck)
 
     @log_arguments_only
-    def query_binary_values(self, cmd, datatype='b', debug=False, errCheck=True):
+    def query_binary_values(self, cmd, datatype='b', debug=False, errCheck=True, headerTimeout=3):
         """
         Send a command and parses response in IEEE 488.2 binary block format.
 
@@ -243,6 +252,7 @@ class SocketInstrument:
                 https://docs.python.org/3/library/struct.html#format-characters
             debug (bool): Turns debug mode on or off.
             errCheck (bool): Local error check flag. Auto error checking will only be done if both global and local error checking is enabled.
+            headerTimeout (int): Timeout used 
 
         Returns (NumPy ndarray): Array containing the data from the instrument buffer.
 
@@ -272,25 +282,32 @@ class SocketInstrument:
         else:
             raise BinblockError('Invalid data type selected.')
 
+        # Clear buffer
+        self.write(f'*CLS', errCheck=False)
+
         # Send command/query
         self.write(cmd, errCheck=False)
 
         # Read # character, raise exception if not present.
         try:
-            self.socket.settimeout(1)
-            if self.socket.recv(1) != b'#':
-                raise BinblockError('Data in buffer is not in binblock format.')
+            original_timeout = self.socket.gettimeout()
+            self.socket.settimeout(headerTimeout)
+            firstChar = self.socket.recv(1)
+            if debug:
+                print(f'First character: {firstChar}')
+            if firstChar != b'#':
+                raise BinblockError(f'Data in buffer is not in binblock format. Expecting #, got {firstChar}.')
         except socket.timeout:
-            self.err_check()
+            raise BinblockError(f'Timeout reached while parsing binary block header. Increase headerTimeout argument in query_binary_values() (current value is {headerTimeout} sec).')
         finally:
-            self.socket.settimeout(self.timeout)
+            self.socket.settimeout(original_timeout)
 
         # Extract header length and number of bytes in binblock.
         headerLength = int(self.socket.recv(1).decode('latin_1'), 16)
         numBytes = int(self.socket.recv(headerLength).decode('latin_1'))
 
         if debug:
-            print('Header: #{}{}'.format(headerLength, numBytes))
+            print(f'Header: #{headerLength}{numBytes}')
 
         # Create a buffer object of the correct size and expose a memoryview for efficient socket reading
         rawData = bytearray(numBytes)
@@ -305,8 +322,7 @@ class SocketInstrument:
             # Subtract bytes received from total bytes.
             numBytes -= bytesRecv
             if debug:
-                print('numBytes: {}, bytesRecv: {}'.format(
-                    numBytes, bytesRecv))
+                print(f'numBytes: {numBytes}, bytesRecv: {bytesRecv}')
 
         # Receive termination character.
         term = self.socket.recv(1)
@@ -314,12 +330,11 @@ class SocketInstrument:
             print('Term char: ', term)
         # If term char is incorrect or not present, raise exception.
         if term != b'\n':
-            print('Term char: {}, rawData Length: {}'.format(
-                term, len(rawData)))
+            self.logger.error(f'Term char: {term}, rawData Length: {len(rawData)}')
             raise BinblockError('Data not terminated correctly.')
 
         if errCheck and self.globalErrCheck:
-            print(f'BINBLOCKREAD - local: {errCheck}, global: {self.globalErrCheck}')
+            # self.logger.info(f'BINBLOCKREAD - local: {errCheck}, global: {self.globalErrCheck}')
             self.err_check()
 
         # Convert binary data to NumPy array of specified data type and return.
@@ -384,7 +399,7 @@ class SocketInstrument:
             print(f'header: {header}')
         
         if errCheck and self.globalErrCheck:
-            print(f'BINBLOCKWRITE - local: {errCheck}, global: {self.globalErrCheck}')
+            # self.logger.info(f'BINBLOCKWRITE - local: {errCheck}, global: {self.globalErrCheck}')
             self.err_check()
 
 
