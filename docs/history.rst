@@ -48,3 +48,13 @@ History
 
 * Added logging functionality.
 
+2025.02.0 (2025-02-12)
+----------------------
+
+* Removed the verboseErrCheck kwarg from ``socketscpi.SocketInstrument`` constructor
+* Changed ``logging.debug()`` calls to ``self.logger.debug()``. 
+* Added a delay argument to ``write()``. 
+* Increased the ``read()`` chunk size from 1024 to 4096. 
+* Added a ``flush()`` method for clearing buffer. 
+* Added ``headerTimeout`` kwarg, added a \*CLS call, added helpful exceptions, and changed ``''.format()`` calls to f-strings in ``query_binary_values()``.
+
